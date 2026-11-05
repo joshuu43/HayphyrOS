@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# HayphyrOS - instalador (rodar na ISO live, como root, em UEFI)
+# HayphyrOS - instalador v2 (rodar na ISO live, como root, em UEFI)
 # ATENCAO: apaga TODO o disco escolhido.
 set -euo pipefail
 
@@ -7,13 +7,20 @@ red()   { printf '\e[31m%s\e[0m\n' "$*"; }
 green() { printf '\e[32m%s\e[0m\n' "$*"; }
 die()   { red "ERRO: $*"; exit 1; }
 
+DOTFILES="$(dirname "$(readlink -f "$0")")/dotfiles"
+
 [[ $EUID -eq 0 ]] || die "rode como root."
 [[ -d /sys/firmware/efi ]] || die "o PC nao esta em modo UEFI."
 ping -c1 -W3 archlinux.org >/dev/null 2>&1 || die "sem internet (use cabo ou iwctl)."
 timedatectl set-ntp true
 
+VIRT=$(systemd-detect-virt 2>/dev/null || true)
+[[ "$VIRT" == "none" ]] && VIRT=""
+
 echo
-green "=== HayphyrOS installer ==="
+green "=== HayphyrOS installer v2 ==="
+[[ -n "$VIRT" ]] && echo "Maquina virtual detectada: $VIRT"
+[[ -d "$DOTFILES" ]] || red "AVISO: pasta dotfiles nao encontrada em $DOTFILES (o visual personalizado nao sera aplicado)."
 echo
 lsblk -d -o NAME,SIZE,MODEL,TRAN,FSTYPE -e7,11
 echo
@@ -68,10 +75,17 @@ mkfs.ext4 -F "$ROOT"
 mount "$ROOT" /mnt
 mount --mkdir "$EFI" /mnt/boot
 
+PKGS=(base linux linux-firmware amd-ucode networkmanager nano sudo
+      sway foot mesa vulkan-radeon vulkan-tools
+      pipewire pipewire-pulse wireplumber htop zram-generator
+      waybar swaync fuzzel cliphist wl-clipboard swaybg swaylock grim slurp
+      brightnessctl playerctl bluez bluez-utils xdg-desktop-portal-wlr
+      noto-fonts noto-fonts-emoji ttf-jetbrains-mono-nerd
+      adw-gtk-theme papirus-icon-theme)
+if [[ "$VIRT" == "oracle" ]]; then PKGS+=(virtualbox-guest-utils); fi
+
 green ">> Instalando sistema base (precisa de internet)"
-pacstrap -K /mnt base linux linux-firmware amd-ucode networkmanager nano sudo \
-  sway foot wmenu mesa vulkan-radeon vulkan-tools \
-  pipewire pipewire-pulse wireplumber ttf-dejavu htop zram-generator
+pacstrap -K /mnt "${PKGS[@]}"
 genfstab -U /mnt >> /mnt/etc/fstab
 
 ROOT_UUID=$(blkid -s UUID -o value "$ROOT")
@@ -116,17 +130,12 @@ vm.watermark_boost_factor = 0
 vm.watermark_scale_factor = 125
 L
 
-cat > /home/$USERN/.bash_profile <<'L'
-[[ -f ~/.bashrc ]] && . ~/.bashrc
-if [ -z "\$WAYLAND_DISPLAY" ] && [ "\$XDG_VTNR" = 1 ]; then
-  exec sway
-fi
-L
-mkdir -p /home/$USERN/.config/sway
-cp /etc/sway/config /home/$USERN/.config/sway/config
-
-systemctl enable NetworkManager systemd-timesyncd
+systemctl enable NetworkManager systemd-timesyncd bluetooth
 CHROOT
+
+if [[ "$VIRT" == "oracle" ]]; then
+  echo "systemctl enable vboxservice" >> /mnt/root/chroot.sh
+fi
 
 if [[ "$JOGOS" =~ ^[sSyY]$ ]]; then
 cat >> /mnt/root/chroot.sh <<'CHROOT'
@@ -135,22 +144,42 @@ pacman -Sy --noconfirm
 pacman -S --noconfirm --needed lib32-vulkan-radeon lib32-mesa
 pacman -S --noconfirm --needed steam gamemode lib32-gamemode mangohud lib32-mangohud gamescope
 CHROOT
-cat >> /mnt/root/chroot.sh <<CHROOT
-usermod -aG gamemode "$USERN"
-mkdir -p /home/$USERN/.config/MangoHud
-printf 'fps\ncpu_stats\ngpu_stats\nram\nframetime\nposition=top-left\nfont_size=18\n' > /home/$USERN/.config/MangoHud/MangoHud.conf
-CHROOT
+echo "usermod -aG gamemode \"$USERN\"" >> /mnt/root/chroot.sh
 fi
-
-cat >> /mnt/root/chroot.sh <<CHROOT
-chown -R $USERN:$USERN /home/$USERN
-CHROOT
 
 arch-chroot /mnt bash /root/chroot.sh
 echo "root:$PASS1"    | arch-chroot /mnt chpasswd
 echo "$USERN:$PASS1"  | arch-chroot /mnt chpasswd
 rm -f /mnt/root/chroot.sh
 
+green ">> Aplicando o visual do HayphyrOS"
+HOME_DIR="/mnt/home/$USERN"
+if [[ -d "$DOTFILES" ]]; then
+  cp -a "$DOTFILES"/. "$HOME_DIR"/
+  chmod +x "$HOME_DIR"/.local/bin/* 2>/dev/null || true
+else
+  mkdir -p "$HOME_DIR/.config/sway"
+  cp /mnt/etc/sway/config "$HOME_DIR/.config/sway/config"
+fi
+mkdir -p "$HOME_DIR/Pictures/Wallpapers" "$HOME_DIR/Pictures/Screenshots"
+
+{
+  echo '[[ -f ~/.bashrc ]] && . ~/.bashrc'
+  echo 'export PATH="$HOME/.local/bin:$PATH"'
+  echo 'export XDG_CURRENT_DESKTOP=sway'
+  echo 'export XDG_SESSION_TYPE=wayland'
+  echo 'export MOZ_ENABLE_WAYLAND=1'
+  if [[ "$VIRT" == "oracle" ]]; then
+    echo '# VirtualBox: renderizacao por software'
+    echo 'export WLR_RENDERER=pixman WLR_NO_HARDWARE_CURSORS=1'
+  fi
+  echo 'if [ -z "$WAYLAND_DISPLAY" ] && [ "$XDG_VTNR" = 1 ]; then'
+  echo '  sway'
+  echo 'fi'
+} > "$HOME_DIR/.bash_profile"
+
+arch-chroot /mnt chown -R "$USERN:$USERN" "/home/$USERN"
+
 umount -R /mnt
 echo
-green "Instalacao concluida! Retire o pendrive e reinicie (poweroff)."
+green "Instalacao concluida! Retire o pendrive e reinicie."
