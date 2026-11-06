@@ -1,0 +1,45 @@
+HAYPHYROS - ATALHOS  (Super = tecla do Windows)
+
+JANELAS (estilo Windows: abrem soltas, no centro)
+  Super+Enter            abrir terminal
+  Super+Q  /  Alt+F4     fechar a janela em foco
+  Alt+Tab  /  Super+Tab  lista de janelas abertas (escolha qual trazer)
+  Super+M                minimizar
+  Super+Shift+M          trazer de volta a janela minimizada
+  Super+Esquerda/Direita encaixar na metade esquerda/direita da tela
+  Super+Cima             tela cheia (janela maximizada)
+  Super+Baixo            voltar ao centro, tamanho medio
+  Super+F                tela cheia de verdade (sem bordas)
+  Super+botao esquerdo   arrastar a janela (segure Super e arraste)
+  Super+botao direito    redimensionar (segure Super e arraste)
+  Super+R                modo redimensionar com setas (Enter ou Esc sai)
+  Super+Shift+Setas      mover a janela aos poucos
+
+MOSAICO (dividir a tela automaticamente)
+  Super+G                colocar TODAS as janelas desta area em mosaico
+  Super+Shift+G          soltar todas de novo
+  Super+Shift+Espaco     alternar so a janela em foco (solta <-> mosaico)
+  Super+B / Super+C      proxima janela divide lado a lado / em cima e embaixo
+
+AREAS DE TRABALHO (como desktops virtuais)
+  Super+1..6             ir para a area 1..6
+  Super+Shift+1..6       mandar a janela para a area 1..6
+  Super+Ctrl+Esq/Dir     area anterior / proxima
+
+PAINEL DO HAYPHYROS
+  Super+N Controls   Super+T Today   Super+S Stats   Super+V Clipboard
+  Super+D Apps       Super+W Wallpaper   Super+P Power   Esc fecha o painel
+  (ou clique na pilula do topo)
+
+OUTROS
+  Super+E                arquivos (Thunar)
+  Super+Shift+D          lancador simples
+  Super+L                bloquear a tela
+  Print                  copiar captura de uma area / Shift+Print salva em Pictures/Screenshots
+  Super+Shift+R          recarregar a configuracao do sway
+  Teclas de volume/musica/brilho funcionam normalmente
+
+NO TERMINAL
+  exit  ou  Ctrl+D       fecha o terminal
+  Ctrl+C                 interrompe o comando que esta rodando
+  Super+Q                fecha a janela do terminal de qualquer jeito
